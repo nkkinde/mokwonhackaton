@@ -8,10 +8,10 @@ import DashBoardPage from './Pages/DashBoardPage.jsx';
 function App() {
     return (
         <Routes>
-            <Route path="/" element={<DashBoardPage />} />
+            <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/dashboard" element={<DashBoardPage />} />
+            <Route path="/DashBoardPage" element={<DashBoardPage />} /> //
         </Routes>
     );
 }

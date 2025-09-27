@@ -18,11 +18,11 @@ function Login() {
         password: password,
       });
 
-      const token = response.data.access_token;
+      const token = response.data.access;
       localStorage.setItem("access_token", token);
 
       alert("Login successful!");
-      navigate("/MainPage");
+      navigate("/DashBoardPage");
     } catch (error) {
       console.error(error);
       alert("Login failed. Please check your ID or password.");
