@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { api } from "../lib/api";
 import "./Login.css";
 import iconImage from "/chaticon.png";
-
-
 
 function Login() {
   const [id, setId] = useState("");
@@ -13,13 +11,14 @@ function Login() {
 
   const handleLogin = async () => {
     try {
-      const response = await axios.post("http://192.168.0.57:4000/api/auth/login", {
-        email: id,
-        password: password,
-      });
+      // 백엔드 포맷: { ok: true, data: { access, refresh, user } }
+      const resp = await api.post("/api/auth/login", { email: id, password });
+      const { access, refresh, user } = resp.data;
 
-      const token = response.data.access;
-      localStorage.setItem("access_token", token);
+      // 토큰/유저 저장 (키 통일)
+      localStorage.setItem("access", access);
+      localStorage.setItem("refresh", refresh);
+      localStorage.setItem("me", JSON.stringify(user));
 
       alert("Login successful!");
       navigate("/DashBoardPage");
@@ -29,66 +28,60 @@ function Login() {
     }
   };
 
-  const goToSignup = () => {
-    navigate("/signup");
-  };
+  const goToSignup = () => navigate("/signup");
 
   return (
-
-
-      <div
-        className="login-inner"
-        style={{
-          position: "relative",
-          zIndex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
-
-        <div className="login-box">
-            <div className="login-icon">
-            <img
-                src={iconImage}
-                alt="아이콘"
-                style={{
-                width: "150px",
-                height: "150px",
-                marginBottom: "30px",
-                objectFit: "cover",
-                borderRadius: "0",
-                }}
-            />
-            </div>
-
-          <div className="login-label">아이디</div>
-          <input
-            type="text"
-            value={id}
-            onChange={(e) => setId(e.target.value)}
-            className="login-input"
-            placeholder="Please enter your email"
+    <div
+      className="login-inner"
+      style={{
+        position: "relative",
+        zIndex: 1,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+      }}
+    >
+      <div className="login-box">
+        <div className="login-icon">
+          <img
+            src={iconImage}
+            alt="아이콘"
+            style={{
+              width: "150px",
+              height: "150px",
+              marginBottom: "30px",
+              objectFit: "cover",
+              borderRadius: "0",
+            }}
           />
-
-          <div className="login-label">비밀번호</div>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="login-input"
-            placeholder="Please enter your password"
-          />
-
-          <button className="login-btn" onClick={handleLogin}>
-            Sign in
-          </button>
-          <button className="signup-btn" onClick={goToSignup}>
-            Sign up
-          </button>
         </div>
-      </div>
 
+        <div className="login-label">아이디</div>
+        <input
+          type="text"
+          value={id}
+          onChange={(e) => setId(e.target.value)}
+          className="login-input"
+          placeholder="Please enter your email"
+        />
+
+        <div className="login-label">비밀번호</div>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="login-input"
+          placeholder="Please enter your password"
+        />
+
+        <button className="login-btn" onClick={handleLogin}>
+          Sign in
+        </button>
+        <button className="signup-btn" onClick={goToSignup}>
+          Sign up
+        </button>
+      </div>
+    </div>
   );
 }
 

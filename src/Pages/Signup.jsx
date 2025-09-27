@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { api } from "../lib/api";
 import "./Signup.css";
 import iconImage from "/chaticon.png";
+
+// 프론트 라디오값 -> 백엔드 locale 매핑
+const mapUserTypeToLocale = {
+  japan: "jp",
+  china: "cn",
+  korea: "kr",
+  usa: "us",
+  vietnam: "vn",
+};
 
 function Signup() {
   const navigate = useNavigate();
@@ -11,18 +20,14 @@ function Signup() {
     password: "",
     password_confirm: "",
     name: "",
-    user_type: "korea", // 기본값 설정
+    user_type: "korea", // default
   });
 
   const [isEmailChecked, setIsEmailChecked] = useState(false);
   const [passwordError, setPasswordError] = useState("");
 
-  // 이메일 입력값이 변경되면 중복 확인 상태를 초기화
-  useEffect(() => {
-    setIsEmailChecked(false);
-  }, [form.email]);
+  useEffect(() => setIsEmailChecked(false), [form.email]);
 
-  // 비밀번호 확인 로직
   useEffect(() => {
     if (form.password_confirm && form.password !== form.password_confirm) {
       setPasswordError("비밀번호가 일치하지 않습니다.");
@@ -33,29 +38,23 @@ function Signup() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm({ ...form, [name]: value });
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 이메일 중복 확인 핸들러
   const handleCheckDuplicateEmail = async () => {
-    if (!form.email) {
-      alert("이메일을 입력해주세요.");
-      return;
-    }
+    if (!form.email) return alert("이메일을 입력해주세요.");
     try {
-      // 서버에 이메일 중복 확인 요청 (GET 요청 권장)
-      const response = await axios.get(
-        `http://192.168.0.57:4000/api/auth/check-email?email=${form.email}`
-      );
+      const response = await api.get(`/api/auth/check-email`, {
+        params: { email: form.email },
+      });
       if (response.data.available) {
         alert("사용 가능한 이메일입니다.");
-        setIsEmailChecked(true); // 중복 확인 완료 상태로 변경
+        setIsEmailChecked(true);
       } else {
         alert("이미 사용 중인 이메일입니다.");
         setIsEmailChecked(false);
       }
     } catch (error) {
-      // 409 Conflict 에러는 이미 사용 중인 이메일을 의미
       if (error.response?.status === 409) {
         alert("이미 사용 중인 이메일입니다.");
       } else {
@@ -65,35 +64,24 @@ function Signup() {
     }
   };
 
-  // 회원가입 폼 제출 핸들러
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!isEmailChecked) {
-      alert("이메일 중복 확인을 해주세요.");
-      return;
-    }
-
-    if (form.password !== form.password_confirm) {
-      alert("비밀번호가 일치하지 않습니다.");
-      return;
-    }
-
-    // 비밀번호, 이름 등 필수 필드 확인
-    if (!form.password || !form.name) {
-      alert("모든 필드를 입력해주세요.");
-      return;
-    }
+    if (!isEmailChecked) return alert("이메일 중복 확인을 해주세요.");
+    if (form.password !== form.password_confirm) return alert("비밀번호가 일치하지 않습니다.");
+    if (!form.password || !form.name) return alert("모든 필드를 입력해주세요.");
 
     try {
-      // 회원가입에 필요한 데이터만 추출하여 전송
       const { email, password, name, user_type } = form;
-      await axios.post("http://192.168.0.57:4000/api/auth/register", {
+      const locale = mapUserTypeToLocale[user_type] || "kr";
+
+      await api.post("/api/auth/register", {
         email,
         password,
         name,
-        user_type,
+        locale, // 백엔드 User.locale 필드에 저장
       });
+
       alert("회원가입이 완료되었습니다!");
       navigate("/login");
     } catch (error) {
@@ -102,7 +90,6 @@ function Signup() {
     }
   };
 
-  // 국가 선택 라디오 버튼 데이터
   const countries = [
     { value: "japan", label: "JAPAN" },
     { value: "china", label: "CHINA" },
@@ -135,6 +122,7 @@ function Signup() {
             }}
           />
         </div>
+
         <div className="signup-field">
           <label>이메일</label>
           <div className="input-line-group">
@@ -146,11 +134,7 @@ function Signup() {
               placeholder="example@example.com"
               required
             />
-            <button
-              type="button"
-              className="check-btn"
-              onClick={handleCheckDuplicateEmail}
-            >
+            <button type="button" className="check-btn" onClick={handleCheckDuplicateEmail}>
               중복 확인
             </button>
           </div>
@@ -183,9 +167,7 @@ function Signup() {
             />
           </div>
           {passwordError && (
-            <p style={{ color: "red", fontSize: "12px", marginTop: "5px" }}>
-              {passwordError}
-            </p>
+            <p style={{ color: "red", fontSize: "12px", marginTop: "5px" }}>{passwordError}</p>
           )}
         </div>
 
@@ -218,11 +200,7 @@ function Signup() {
           ))}
         </div>
 
-        <button
-          type="submit"
-          className="signup-submit"
-          disabled={!isEmailChecked || !!passwordError}
-        >
+        <button type="submit" className="signup-submit" disabled={!isEmailChecked || !!passwordError}>
           가입하기
         </button>
       </form>
