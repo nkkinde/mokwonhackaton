@@ -94,3 +94,250 @@ model Summary {
   createdAt   DateTime @default(now())
   room        Room     @relation(fields: [roomId], references: [id])
 }
+
+
+
+----------------------------
+
+# Chat Backend API Spec (for Frontend Integration)
+_Last updated: 2025-09-27_
+
+## Base URL
+- **Local**: `http://localhost:4000`
+- **Prod/Stage**: (프론트팀 환경에 맞춰 교체)  
+- **Socket.IO path**: default `/socket.io`
+
+## Auth
+- JWT Access/Refresh 사용
+- 헤더: `Authorization: Bearer <access_token>`
+- 토큰 재발급 엔드포인트 제공
+
+## 공통 응답 포맷
+성공:
+```json
+{{
+  "ok": true,
+  "data": {{ ... }}
+}}
+```
+실패:
+```json
+{{
+  "ok": false,
+  "error": {{ "code": "ERROR_CODE", "message": "설명" }}
+}}
+```
+
+---
+
+## Endpoints
+
+### Health
+**GET** `/health` → 서버 상태 체크  
+**200** → `{ "ok": true, "data": { "status": "UP" } }` (실제 구현과 다를 수 있음)
+
+### Auth
+**POST** `/api/auth/register`  
+Body:
+```json
+{{ "email": "a@b.com", "password": "pass1234", "name":"홍길동" }}
+```
+→ `{ "ok": true, "data": { "user": {{...}} } }`
+
+**POST** `/api/auth/login`  
+Body:
+```json
+{{ "email": "a@b.com", "password": "pass1234" }}
+```
+→
+```json
+{{
+  "ok": true,
+  "data": {{
+    "access": "<ACCESS>",
+    "refresh": "<REFRESH>",
+    "user": {{ "id":"...", "email":"...", "name":"...", "locale":"ko" }}
+  }}
+}}
+```
+
+**POST** `/api/auth/refresh`  
+Body:
+```json
+{{ "token": "<REFRESH>" }}
+```
+→
+```json
+{{ "ok": true, "data": {{ "access": "<NEW_ACCESS>" }} }}
+```
+
+### Users
+**GET** `/api/users/me` → 내 정보
+
+**PATCH** `/api/users/me/locale`  
+Body:
+```json
+{{ "locale": "ko" }} // ko|ja|en|zh|vi
+```
+
+### Rooms
+**POST** `/api/rooms`  
+Body:
+```json
+{{ "name": "팀 채널", "description": "소개문 (optional)" }}
+```
+
+**GET** `/api/rooms/:id` → 룸 상세(+멤버)
+
+### Messages
+**GET** `/api/messages/room/:roomId`  
+Query:
+- `cursor` (선택, messageId)
+- `limit` (선택, 기본 50, 최대 200)
+- `order` (선택, `asc`|`desc`, 기본 `asc`)
+
+응답 예:
+```json
+{{
+  "ok": true,
+  "data": {{
+    "items": [{{ "id":"...", "body":"...", "userId":"...", "createdAt":"..." }}],
+    "nextCursor": "msg_..."
+  }}
+}}
+```
+
+**POST** `/api/messages/room/:roomId`  
+Body:
+```json
+{{ "body": "안녕하세요" }}
+```
+→ 성공 시 해당 room으로 Socket `message:new` 브로드캐스트
+
+### Translation (자동 번역/강제 재번역)
+**POST** `/api/messages/:id/translate`  
+Body:
+```json
+{{ "locale": "ko", "force": true }}
+```
+→ 개인 채널로 `message:translated` 이벤트 송신
+
+**POST** `/api/messages/translate/batch`  
+Body:
+```json
+{{ "messageIds": ["msg1","msg2"], "locale": "ko", "force": false }}
+```
+
+### Summary (요약)
+**POST** `/api/summary/rooms/:roomId`  
+Body (optional):
+```json
+{{ "limit": 200, "fromMessageId": "msg_a", "toMessageId": "msg_b", "title":"9/28 회의 요약" }}
+```
+→ `{ "ok": true, "data": { "jobId": "..." } }`  
+완료되면 개인 채널로 `summary:ready` 이벤트 송신
+
+**GET** `/api/summary/rooms/:roomId/latest` → 최신 요약
+
+**GET** `/api/summary/:summaryId` → 요약 상세
+
+---
+
+## Socket.IO Events
+
+### 인증 및 연결
+```ts
+import {{ io }} from "socket.io-client";
+
+const socket = io(BASE_URL, {{
+  withCredentials: true,
+  auth: {{ token: "<ACCESS_TOKEN>" }},
+  // path: "/socket.io"
+}});
+```
+
+### 공통 이벤트
+- **Client → Server**
+  - `room:join` (payload: `roomId`)
+  - `room:leave` (payload: `roomId`)
+  - `ping`
+
+- **Server → Client**
+  - `pong`
+  - `message:new` (room 브로드캐스트)
+  - `message:translated` (개인 채널)
+  - `summary:ready` (개인 채널)
+
+### 개인 채널 가입 권장
+로그인 직후 서버가 `user:{id}` 룸에 자동 조인하거나,
+클라이언트에서 `socket.emit("user:join", userId)`를 지원하도록 합의.
+
+---
+
+## Rate Limit (권장값 예시)
+- 전역: 60s 당 120 req (개발/시연 환경에서는 완화 가능)
+- 번역/요약 enqueue: 분당 10회
+
+---
+
+## 환경변수 (.env.example)
+```
+PORT=4000
+CORS_ORIGIN=http://localhost:3000,https://staging.front.com
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/chat
+REDIS_URL=redis://localhost:6379
+
+JWT_ACCESS_SECRET=changeme
+JWT_REFRESH_SECRET=changeme
+JWT_ACCESS_EXPIRES=15m
+JWT_REFRESH_EXPIRES=7d
+
+OPENAI_API_KEY=sk-...
+```
+
+---
+
+## 로컬 실행 명령어
+
+### 1) 인프라 기동
+```bash
+docker compose up -d           # Postgres + Redis
+```
+
+### 2) DB 준비
+```bash
+npm run prisma:dev             # prisma migrate & generate (레포 내 스크립트명에 맞게)
+```
+
+### 3) 서버 & 워커
+```bash
+npm run dev                    # Express + Socket.IO
+npm run worker                 # BullMQ workers (translation/summary)
+```
+
+### 4) 테스트용 cURL
+
+#### 로그인
+```bash
+curl -X POST $BASE/api/auth/login -H "Content-Type: application/json" -d '{{"email":"a@b.com","password":"pass1234"}}'
+```
+
+#### 메시지 목록 (페이징)
+```bash
+curl "$BASE/api/messages/room/$ROOM?limit=50&cursor=$CURSOR" -H "Authorization: Bearer $ACCESS"
+```
+
+#### 요약 생성
+```bash
+curl -X POST "$BASE/api/summary/rooms/$ROOM"   -H "Authorization: Bearer $ACCESS" -H "Content-Type: application/json"   -d '{{"limit":200,"title":"9/28 회의 요약"}}'
+```
+
+---
+
+## 에러 코드 샘플
+- `AUTH_INVALID_CREDENTIALS`
+- `ROOM_NOT_FOUND`
+- `SUMMARY_ENQUEUE_FAILED`
+- `SUMMARY_NOT_FOUND`
+
+프론트에서는 코드 기반으로 UX 분기(토스트/다이얼로그) 처리 권장.

@@ -2,47 +2,163 @@ import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import Image from '../components/Image';
 import './DashBoardPage.css';
+// ChatGPT 기능이 필요할 때 아래 라인 주석 해제
+// import { generateChatGPTResponse, isChatGPTMessage, extractGPTQuery, prepareConversationHistory } from '../services/chatGPTService';
 
-// 임시 데이터 - 등록된 사용자들 (실제로는 DB에서 가져올 데이터)
+// 더미 데이터 - 등록된 사용자들
 const registeredUsers = [
-    'kimcs@example.com',
-    'parkyh@example.com',
-    'leemj@example.com',
-    'test@test.com',
-    'user@example.com'
+    { id: 1, email: 'kimcs@example.com', name: '김철수' },
+    { id: 2, email: 'parkyh@example.com', name: '박영희' },
+    { id: 3, email: 'leemj@example.com', name: '이민준' },
+    { id: 4, email: 'test@test.com', name: '테스트 사용자' },
+    { id: 5, email: 'user@example.com', name: '사용자' }
 ];
 
+// 채팅방 목록 더미 데이터
 const chatListData = [
     {
-        id: 1,
+        id: 'room-1',
         name: '김철수',
-        message: ' 안녕하세요',
-        time: '1시간 전',
-        img: 'https://via.placeholder.com/56'
+        lastMessage: '안녕하세요! 오늘 회의 어떠세요?',
+        lastMessageTime: '2025-09-28T10:30:00Z',
+        memberIds: [1, 2], // 김철수, 박영희
+        avatarUrl: 'https://via.placeholder.com/56'
     },
     {
-        id: 2,
+        id: 'room-2',
         name: '박영희',
-        message: ' 네, 확인했습니다.',
-        time: '2시간 전',
-        img: 'https://via.placeholder.com/56'
+        lastMessage: '네, 확인했습니다. 자료 보내드렸어요.',
+        lastMessageTime: '2025-09-28T09:15:00Z',
+        memberIds: [2, 3], // 박영희, 이민준
+        avatarUrl: 'https://via.placeholder.com/56'
     },
     {
-        id: 3,
+        id: 'room-3',
         name: '이민준',
-        message: '   ㅋㅋㅋㅋㅋ',
-        time: '어제',
-        img: 'https://via.placeholder.com/56'
+        lastMessage: 'ㅋㅋㅋㅋㅋ 재밌네요!',
+        lastMessageTime: '2025-09-27T20:45:00Z',
+        memberIds: [3, 4], // 이민준, 테스트 사용자
+        avatarUrl: 'https://via.placeholder.com/56'
+    },
+    {
+        id: 'room-4',
+        name: '팀 채널',
+        lastMessage: '내일 회의는 오전 10시에 시작합니다.',
+        lastMessageTime: '2025-09-27T18:20:00Z',
+        memberIds: [1, 2, 3, 4], // 모든 멤버
+        avatarUrl: 'https://via.placeholder.com/56'
     }
 ];
 
-// 채팅창 컴포넌트 (새로 추가)
-function ChatRoom({ user, messages, onSendMessage }) {
+// 채팅방별 메시지 더미 데이터
+const chatMessagesData = {
+    'room-1': [
+        {
+            id: 'msg-1-1',
+            senderId: 1,
+            senderName: '김철수',
+            body: '안녕하세요!',
+            createdAt: '2025-09-28T10:00:00Z',
+            isMe: false
+        },
+        {
+            id: 'msg-1-2',
+            senderId: 2,
+            senderName: '박영희',
+            body: '네, 안녕하세요!',
+            createdAt: '2025-09-28T10:05:00Z',
+            isMe: true
+        },
+        {
+            id: 'msg-1-3',
+            senderId: 1,
+            senderName: '김철수',
+            body: '오늘 회의 어떠세요?',
+            createdAt: '2025-09-28T10:30:00Z',
+            isMe: false
+        }
+    ],
+    'room-2': [
+        {
+            id: 'msg-2-1',
+            senderId: 2,
+            senderName: '박영희',
+            body: '프로젝트 진행 상황 공유드립니다.',
+            createdAt: '2025-09-28T09:00:00Z',
+            isMe: true
+        },
+        {
+            id: 'msg-2-2',
+            senderId: 3,
+            senderName: '이민준',
+            body: '네, 확인했습니다. 자료 보내드렸어요.',
+            createdAt: '2025-09-28T09:15:00Z',
+            isMe: false
+        }
+    ],
+    'room-3': [
+        {
+            id: 'msg-3-1',
+            senderId: 3,
+            senderName: '이민준',
+            body: '어제 TV에서 본 코미디 영화',
+            createdAt: '2025-09-27T20:30:00Z',
+            isMe: false
+        },
+        {
+            id: 'msg-3-2',
+            senderId: 4,
+            senderName: '테스트 사용자',
+            body: 'ㅋㅋㅋㅋㅋ 재밌네요!',
+            createdAt: '2025-09-27T20:45:00Z',
+            isMe: true
+        }
+    ],
+    'room-4': [
+        {
+            id: 'msg-4-1',
+            senderId: 1,
+            senderName: '김철수',
+            body: '내일 회의 안건 공유합니다.',
+            createdAt: '2025-09-27T18:00:00Z',
+            isMe: false
+        },
+        {
+            id: 'msg-4-2',
+            senderId: 2,
+            senderName: '박영희',
+            body: '내일 회의는 오전 10시에 시작합니다.',
+            createdAt: '2025-09-27T18:20:00Z',
+            isMe: true
+        },
+        {
+            id: 'msg-4-3',
+            senderId: 3,
+            senderName: '이민준',
+            body: '네, 알겠습니다!',
+            createdAt: '2025-09-27T18:25:00Z',
+            isMe: false
+        }
+    ]
+};
+
+// 채팅창 컴포넌트
+function ChatRoom({ room, messages, onSendMessage }) {
     const [inputValue, setInputValue] = useState('');
 
     const handleSendMessage = () => {
         if (inputValue.trim() === '') return;
-        onSendMessage(user.id, { text: inputValue, sender: 'me' });
+
+        const newMessage = {
+            id: `msg-${room.id}-${Date.now()}`,
+            senderId: 'current-user',
+            senderName: '나',
+            body: inputValue.trim(),
+            createdAt: new Date().toISOString(),
+            isMe: true
+        };
+
+        onSendMessage(room.id, newMessage);
         setInputValue('');
     };
 
@@ -52,58 +168,205 @@ function ChatRoom({ user, messages, onSendMessage }) {
         }
     };
 
+    const formatTime = dateString => {
+        const date = new Date(dateString);
+        return date.toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
     return (
-        <div className="chat-room">
-            <div className="chat-header">
-                <Image src={undefined} alt={user.name} style={{ width: '40px', height: '40px' }} />
-                <h3>{user.name}</h3>
+        <div
+            className="chat-room"
+            style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* 채팅방 헤더 */}
+            <div
+                className="chat-header"
+                style={{
+                    padding: '16px 20px',
+                    borderBottom: '1px solid #eee',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    backgroundColor: '#fff'
+                }}>
+                <Image
+                    src={room.avatarUrl}
+                    alt={room.name}
+                    style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        backgroundColor: '#ddd'
+                    }}
+                />
+                <div>
+                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 'bold' }}>{room.name}</h3>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>
+                        멤버 {room.memberIds?.length || 0}명
+                    </p>
+                </div>
             </div>
-            <div className="chat-messages">
+
+            {/* 메시지 영역 */}
+            <div
+                className="chat-messages"
+                style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: '16px 20px',
+                    backgroundColor: '#f8f9fa'
+                }}>
                 {!messages || messages.length === 0 ? (
-                    <p>{user.name}님과의 대화를 시작해보세요.</p>
+                    <div style={{ textAlign: 'center', color: '#666', padding: '40px 0' }}>
+                        <p>첫 메시지를 보내보세요!</p>
+                    </div>
                 ) : (
-                    messages.map((msg, idx) => (
+                    messages.map(msg => (
                         <div
-                            key={idx}
-                            className={msg.sender === 'me' ? 'my-message' : 'other-message'}>
-                            {msg.text}
+                            key={msg.id}
+                            style={{
+                                marginBottom: '16px',
+                                display: 'flex',
+                                justifyContent: msg.isMe ? 'flex-end' : 'flex-start'
+                            }}>
+                            <div
+                                style={{
+                                    maxWidth: '70%',
+                                    padding: '12px 16px',
+                                    borderRadius: '16px',
+                                    backgroundColor: msg.isMe ? '#add8ff' : '#ffffff',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                                    position: 'relative'
+                                }}>
+                                {!msg.isMe && (
+                                    <div
+                                        style={{
+                                            fontSize: '12px',
+                                            color: '#666',
+                                            marginBottom: '4px',
+                                            fontWeight: 'bold'
+                                        }}>
+                                        {msg.senderName}
+                                    </div>
+                                )}
+                                <div
+                                    style={{
+                                        fontSize: '14px',
+                                        lineHeight: '1.4',
+                                        wordBreak: 'break-word'
+                                    }}>
+                                    {msg.body}
+                                </div>
+                                <div
+                                    style={{
+                                        fontSize: '10px',
+                                        color: msg.isMe ? '#0066cc' : '#999',
+                                        marginTop: '4px',
+                                        textAlign: 'right'
+                                    }}>
+                                    {formatTime(msg.createdAt)}
+                                </div>
+                            </div>
                         </div>
                     ))
                 )}
             </div>
-            <div className="chat-input-area">
-                <input
-                    type="text"
-                    placeholder="메시지 입력..."
-                    value={inputValue}
-                    onChange={e => setInputValue(e.target.value)}
-                    onKeyDown={handleInputKeyDown}
-                />
-                <button onClick={handleSendMessage}>전송</button>
+
+            {/* 메시지 입력 영역 */}
+            <div
+                className="chat-input-area"
+                style={{
+                    padding: '16px 20px',
+                    borderTop: '1px solid #eee',
+                    backgroundColor: '#fff'
+                }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                        type="text"
+                        placeholder="메시지를 입력하세요..."
+                        value={inputValue}
+                        onChange={e => setInputValue(e.target.value)}
+                        onKeyDown={handleInputKeyDown}
+                        style={{
+                            flex: 1,
+                            padding: '12px 16px',
+                            border: '1px solid #ddd',
+                            borderRadius: '24px',
+                            outline: 'none',
+                            fontSize: '14px'
+                        }}
+                    />
+                    <button
+                        onClick={handleSendMessage}
+                        disabled={!inputValue.trim()}
+                        style={{
+                            padding: '12px 20px',
+                            backgroundColor: inputValue.trim() ? '#add8ff' : '#ccc',
+                            color: inputValue.trim() ? '#333' : '#666',
+                            border: 'none',
+                            borderRadius: '24px',
+                            cursor: inputValue.trim() ? 'pointer' : 'not-allowed',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            transition: 'background-color 0.2s'
+                        }}>
+                        전송
+                    </button>
+                </div>
             </div>
         </div>
     );
 }
 
 export default function DashBoard() {
-    const [selectedChat, setSelectedChat] = useState(null);
-    const [chatMessages, setChatMessages] = useState({});
+    // 상태 관리
+    const [selectedRoom, setSelectedRoom] = useState(null);
+    const [chatMessages, setChatMessages] = useState(chatMessagesData); // 더미 데이터로 초기화
     const [chatList, setChatList] = useState(chatListData);
     const [showEmailInput, setShowEmailInput] = useState(false);
     const [newEmail, setNewEmail] = useState('');
     const [showSignupPrompt, setShowSignupPrompt] = useState(false);
     const [unregisteredEmail, setUnregisteredEmail] = useState('');
     const [copySuccess, setCopySuccess] = useState(false);
+    // ChatGPT 기능이 필요할 때 아래 라인들 주석 해제
+    // const [isGPTLoading, setIsGPTLoading] = useState(false);
+    // const [gptError, setGptError] = useState('');
 
-    const handleChatItemClick = chat => {
-        setSelectedChat(chat);
+    // 채팅방 클릭 핸들러
+    const handleRoomClick = room => {
+        setSelectedRoom(room);
+        console.log('선택된 채팅방:', room);
+        console.log('메시지:', chatMessages[room.id] || []);
     };
 
-    const handleSendMessage = (chatId, message) => {
+    // 메시지 전송 핸들러
+    const handleSendMessage = (roomId, message) => {
         setChatMessages(prev => ({
             ...prev,
-            [chatId]: [...(prev[chatId] || []), message]
+            [roomId]: [...(prev[roomId] || []), message]
         }));
+
+        // 채팅방 목록의 마지막 메시지 업데이트
+        setChatList(prev =>
+            prev.map(room =>
+                room.id === roomId
+                    ? {
+                          ...room,
+                          lastMessage: message.body,
+                          lastMessageTime: message.createdAt
+                      }
+                    : room
+            )
+        );
+
+        // ChatGPT 기능 추가 시 여기에 ChatGPT 로직 구현
+        /*
+        if (isChatGPTMessage(message.body)) {
+            // ChatGPT 응답 로직
+        }
+        */
     };
 
     const handleAddChatClick = () => {
@@ -123,52 +386,52 @@ export default function DashBoard() {
     const handleAddNewChat = async () => {
         if (!newEmail.trim()) return;
 
-        // 간단한 이메일 형식 검증
+        // 이메일 형식 검증
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(newEmail)) {
             alert('유효한 이메일 주소를 입력해주세요.');
             return;
         }
 
-        // DB에서 사용자 존재 여부 확인 (실제로는 API 호출)
-        const isUserRegistered = await checkUserExists(newEmail);
+        // 사용자 존재 여부 확인
+        const user = registeredUsers.find(u => u.email === newEmail);
 
-        if (!isUserRegistered) {
-            // 등록되지 않은 사용자인 경우
+        if (!user) {
+            // 등록되지 않은 사용자
             setUnregisteredEmail(newEmail);
             setShowEmailInput(false);
             setShowSignupPrompt(true);
             return;
         }
 
-        // 등록된 사용자인 경우 채팅방 추가
-        const newId = chatList.length > 0 ? Math.max(...chatList.map(c => c.id)) + 1 : 1;
-        setChatList([
-            ...chatList,
-            {
-                id: newId,
-                name: newEmail,
-                message: '새로운 채팅방입니다.',
-                time: '방금 전',
-                img: 'https://via.placeholder.com/56'
-            }
-        ]);
+        // 이미 존재하는 채팅방인지 확인
+        const existingRoom = chatList.find(
+            room => room.memberIds.includes(user.id) && room.memberIds.length === 2
+        );
+
+        if (existingRoom) {
+            alert('이미 이 사용자와의 채팅방이 존재합니다.');
+            setSelectedRoom(existingRoom);
+            setNewEmail('');
+            setShowEmailInput(false);
+            return;
+        }
+
+        // 새 채팅방 생성
+        const newRoom = {
+            id: `room-${Date.now()}`,
+            name: user.name,
+            lastMessage: '새로운 채팅방이 생성되었습니다.',
+            lastMessageTime: new Date().toISOString(),
+            memberIds: [user.id, 'current-user'],
+            avatarUrl: 'https://via.placeholder.com/56'
+        };
+
+        setChatList(prev => [newRoom, ...prev]);
+        setChatMessages(prev => ({ ...prev, [newRoom.id]: [] })); // 빈 메시지 배열
+        setSelectedRoom(newRoom);
         setNewEmail('');
         setShowEmailInput(false);
-    };
-
-    // 사용자 존재 여부 확인 (더미 함수 - 실제로는 API 호출)
-    const checkUserExists = async email => {
-        // 실제 구현에서는 서버 API 호출
-        // const response = await fetch(`/api/users/check?email=${email}`);
-        // return response.ok;
-
-        // 더미 로직: registeredUsers 배열에서 확인
-        return new Promise(resolve => {
-            setTimeout(() => {
-                resolve(registeredUsers.includes(email));
-            }, 500); // 네트워크 지연 시뮬레이션
-        });
     };
 
     const handleSignupPromptClose = () => {
@@ -183,13 +446,12 @@ export default function DashBoard() {
             await navigator.clipboard.writeText(signupUrl);
             setCopySuccess(true);
 
-            // 3초 후 복사 성공 메시지 숨기기
             setTimeout(() => {
                 setCopySuccess(false);
             }, 3000);
         } catch (error) {
             console.error('클립보드 복사 실패:', error);
-            // 폴백: 텍스트 선택 방식
+            // 폴백
             const textArea = document.createElement('textarea');
             textArea.value = `${window.location.origin}/signup`;
             document.body.appendChild(textArea);
@@ -204,14 +466,33 @@ export default function DashBoard() {
         }
     };
 
+    // 시간 포맷 헬퍼
+    const formatRoomTime = timeString => {
+        if (!timeString) return '';
+
+        const date = new Date(timeString);
+        const now = new Date();
+        const diff = now - date;
+
+        if (diff < 60000) return '방금 전';
+        if (diff < 3600000) return `${Math.floor(diff / 60000)}분 전`;
+        if (diff < 86400000) return `${Math.floor(diff / 3600000)}시간 전`;
+        if (diff < 604800000) return `${Math.floor(diff / 86400000)}일 전`;
+
+        return date.toLocaleDateString('ko-KR');
+    };
+
     return (
         <div className="dashboard-layout">
             <Sidebar
                 style={{
-                    backgroundColor: '#a1a1a183',
-                    color: '#fff',
+                    backgroundColor: '#ffffff',
+                    color: '#333',
                     width: '350px',
-                    position: 'relative'
+                    position: 'relative',
+                    borderRight: '1px solid #e9ecef',
+                    display: 'flex',
+                    flexDirection: 'column'
                 }}>
                 <div
                     className="sidebar-header"
@@ -249,25 +530,78 @@ export default function DashBoard() {
                         +
                     </button>
                 </div>
-                <div className="chat-list">
-                    {chatList.map(chat => (
-                        <div
-                            key={chat.id}
-                            className="chat-item"
-                            onClick={() => handleChatItemClick(chat)}>
-                            <Image
-                                src={undefined}
-                                alt={chat.name}
-                                style={{ width: '56px', height: '56px' }}
-                            />
-                            <div className="chat-info">
-                                <span className="chat-name">{chat.name}</span>
-                                <span className="chat-preview">
-                                    {chat.message} · {chat.time}
-                                </span>
-                            </div>
+                <div className="chat-list" style={{ flex: 1, overflowY: 'auto' }}>
+                    {chatList.length === 0 ? (
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+                            <p>참여 중인 채팅방이 없습니다.</p>
+                            <p>새 채팅을 시작해보세요!</p>
                         </div>
-                    ))}
+                    ) : (
+                        chatList.map(room => (
+                            <div
+                                key={room.id}
+                                className="chat-item"
+                                onClick={() => handleRoomClick(room)}
+                                style={{
+                                    padding: '12px 16px',
+                                    cursor: 'pointer',
+                                    backgroundColor:
+                                        selectedRoom?.id === room.id ? '#e6f3ff' : 'transparent',
+                                    borderBottom: '1px solid #f0f0f0',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '12px',
+                                    transition: 'background-color 0.2s'
+                                }}
+                                onMouseEnter={e => {
+                                    if (selectedRoom?.id !== room.id) {
+                                        e.target.style.backgroundColor = '#f5f5f5';
+                                    }
+                                }}
+                                onMouseLeave={e => {
+                                    if (selectedRoom?.id !== room.id) {
+                                        e.target.style.backgroundColor = 'transparent';
+                                    }
+                                }}>
+                                <Image
+                                    src={room.avatarUrl}
+                                    alt={room.name}
+                                    style={{
+                                        width: '48px',
+                                        height: '48px',
+                                        borderRadius: '50%',
+                                        backgroundColor: '#ddd',
+                                        flexShrink: 0
+                                    }}
+                                />
+                                <div className="chat-info" style={{ flex: 1, minWidth: 0 }}>
+                                    <div
+                                        className="chat-name"
+                                        style={{
+                                            fontSize: '16px',
+                                            fontWeight: 'bold',
+                                            marginBottom: '4px',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                        }}>
+                                        {room.name}
+                                    </div>
+                                    <div
+                                        className="chat-preview"
+                                        style={{
+                                            fontSize: '14px',
+                                            color: '#666',
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis'
+                                        }}>
+                                        {room.lastMessage} · {formatRoomTime(room.lastMessageTime)}
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
                 </div>
             </Sidebar>
 
@@ -546,19 +880,67 @@ export default function DashBoard() {
                 </div>
             )}
 
-            <main className="content-area">
-                {selectedChat ? (
+            <main
+                className="content-area"
+                style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                {selectedRoom ? (
                     <ChatRoom
-                        user={selectedChat}
-                        messages={chatMessages[selectedChat.id] || []}
+                        room={selectedRoom}
+                        messages={chatMessages[selectedRoom.id] || []}
                         onSendMessage={handleSendMessage}
                     />
                 ) : (
-                    <div className="placeholder">
-                        <div className="placeholder-icon"></div>
-                        <h2>내 메시지</h2>
-                        <p>친구에게 메시지를 보내보세요.</p>
-                        <button className="message-button">메시지 보내기</button>
+                    <div
+                        className="placeholder"
+                        style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '40px',
+                            textAlign: 'center',
+                            backgroundColor: '#f8f9fa'
+                        }}>
+                        <div
+                            className="placeholder-icon"
+                            style={{
+                                width: '80px',
+                                height: '80px',
+                                backgroundColor: '#e9ecef',
+                                borderRadius: '50%',
+                                marginBottom: '20px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '36px'
+                            }}>
+                            💬
+                        </div>
+                        <h2 style={{ color: '#495057', marginBottom: '12px' }}>
+                            채팅방을 선택해주세요
+                        </h2>
+                        <p style={{ color: '#6c757d', marginBottom: '20px' }}>
+                            왼쪽에서 채팅방을 선택하거나 새 채팅을 시작해보세요.
+                        </p>
+                        <button
+                            className="message-button"
+                            onClick={() => setShowEmailInput(true)}
+                            style={{
+                                padding: '12px 24px',
+                                backgroundColor: '#add8ff',
+                                color: '#333',
+                                border: 'none',
+                                borderRadius: '24px',
+                                cursor: 'pointer',
+                                fontSize: '16px',
+                                fontWeight: 'bold',
+                                transition: 'background-color 0.2s'
+                            }}
+                            onMouseOver={e => (e.target.style.backgroundColor = '#80caff')}
+                            onMouseOut={e => (e.target.style.backgroundColor = '#add8ff')}>
+                            새 채팅 시작
+                        </button>
                     </div>
                 )}
             </main>
