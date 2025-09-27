@@ -1,10 +1,9 @@
-import './App.css';
-import Button from './components/button';
+import DashBoardPage from './Pages/DashBoardPage';
 
 function App() {
     return (
         <>
-            <Button />
+            <DashBoardPage />
         </>
     );
 }
