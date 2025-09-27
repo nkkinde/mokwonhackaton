@@ -5,6 +5,8 @@ import './DashBoardPage.css';
 // ChatGPT 기능이 필요할 때 아래 라인 주석 해제
 // import { generateChatGPTResponse, isChatGPTMessage, extractGPTQuery, prepareConversationHistory } from '../services/chatGPTService';
 import { translateText } from '../services/chatGPTService';
+import { api } from '../lib/api';
+import { getSocket } from '../lib/socket';
 
 // 더미 데이터 - 등록된 사용자들
 const registeredUsers = [
@@ -158,6 +160,17 @@ const chatMessagesData = {
         }
     ]
 };
+
+// 현재 사용자 언어코드 계산 (참고 용)
+const countryToLang = { us: 'en', cn: 'zh', jp: 'ja', vn: 'vi', kr: 'ko' };
+function myLang() {
+  try {
+    const me = JSON.parse(localStorage.getItem('me') || '{}');
+    return countryToLang[(me?.locale || 'us').toLowerCase()] || 'en';
+  } catch {
+    return 'en';
+  }
+}
 
 // 채팅창 컴포넌트
 function ChatRoom({
@@ -481,6 +494,102 @@ export default function DashBoard() {
         console.log('선택된 채팅방:', room);
         console.log('메시지:', chatMessages[room.id] || []);
     };
+  
+  const lang = myLang();
+
+  // 1) 소켓 연결 및 수신 이벤트
+  useEffect(() => {
+    const socket = getSocket();
+    const me = JSON.parse(localStorage.getItem('me') || '{}');
+
+    const onConnect = () => console.log('socket connected');
+
+    // 서버가 newMessage를 보낼 때 translated가 있으면 우선 사용, 없으면 body
+    const onNew = (msg) => {
+      const mine = msg.senderId === me.id;
+      if (mine) return; // 내가 보낸 메시지는 UI에 이미 반영
+
+      const display = (msg && (msg.translated || msg.body)) || '';
+      setChatMessages(prev => ({
+        ...prev,
+        [msg.roomId]: [...(prev[msg.roomId] || []), { ...msg, display, mine: false }],
+      }));
+    };
+
+    const onErr = (err) => console.error('socket error:', err?.message || err);
+
+    socket.on('connect', onConnect);
+    socket.on('newMessage', onNew);
+    socket.on('errorMessage', onErr);
+    socket.on('connect_error', onErr);
+
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('newMessage', onNew);
+      socket.off('errorMessage', onErr);
+      socket.off('connect_error', onErr);
+    };
+  }, [lang]);
+
+  // 2) 방 목록 불러오기
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get('/api/rooms/my', { params: { withPreview: 1, limit: 30 } });
+        const items = res.data?.data?.items || [];
+
+        const mapped = items.map(r => ({
+          id: r.id,
+          name: r.name || '(이름 없음)',
+          message: r.preview?.body || '',
+          time: r.preview?.createdAt ? new Date(r.preview.createdAt).toLocaleString() : '',
+          img: 'https://via.placeholder.com/56',
+        }));
+        setChatList(mapped);
+      } catch (e) {
+        console.error('채팅 목록 로드 실패:', e);
+      }
+    })();
+  }, []);
+  
+  // 3) 채팅방 클릭 → 자동 번역된 메시지 불러오기
+  const handleChatItemClick = async (chat) => {
+    if (selectedChat?.id === chat.id) return;
+    setSelectedChat(chat);
+
+    try {
+      // ✅ 자동 번역 결과를 포함해주는 백엔드 엔드포인트 사용
+      const res = await api.get(`/api/messages/room/${chat.id}/view`, {
+        params: { force: 1 }
+      });
+      const { items = [] } = res.data || {};
+      const me = JSON.parse(localStorage.getItem('me') || '{}');
+      console.log(me);
+
+      const mappedMessages = items
+        .map(msg => ({
+          ...msg,
+          // ✅ translated가 있으면 우선 사용, 없으면 body
+          display: (msg.translated || msg.body || ''),
+          mine: msg.senderId === me.id,
+        }))
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+      setChatMessages(prev => ({
+        ...prev,
+        [chat.id]: mappedMessages,
+      }));
+    } catch (e) {
+      console.error('메시지 로드 실패:', e);
+      setChatMessages(prev => ({
+        ...prev,
+        [chat.id]: [],
+      }));
+    }
+
+    const socket = getSocket();
+    socket.emit('joinRoom', chat.id);
+  };
 
     // 메시지 전송 핸들러
     const handleSendMessage = (roomId, message) => {
@@ -559,12 +668,64 @@ export default function DashBoard() {
     const handleEmailInputChange = e => {
         setNewEmail(e.target.value);
     };
+  
+  // 4) 메시지 전송
+  const handleSendMessage = (roomId, text) => {
+    // 낙관적 업데이트 (원문 표시)
+    setChatMessages(prev => ({
+      ...prev,
+      [roomId]: [...(prev[roomId] || []), { display: text, mine: true }],
+    }));
 
-    const handleEmailInputKeyDown = e => {
-        if (e.key === 'Enter') {
-            handleAddNewChat();
-        }
-    };
+    const socket = getSocket();
+    socket.emit('sendMessage', { roomId, body: text });
+  };
+
+  const handleAddChatClick = () => setShowEmailInput(prev => !prev);
+  const handleEmailInputChange = (e) => setNewEmail(e.target.value);
+
+  // 5) 새 채팅 추가 (DM 생성/조회)
+  const handleAddNewChat = async () => {
+    if (!newEmail.trim()) return alert('이메일을 입력해주세요.');
+    try {
+      const res = await api.post('/api/rooms/dm', { email: newEmail });
+      if (!res.data?.data?.found) {
+        alert('존재하지 않는 사용자입니다.');
+        return;
+      }
+
+      const room = res.data.data.room;
+      const exists = chatList.find(c => c.id === room.id);
+
+      if (exists) {
+        setSelectedChat(exists);
+      } else {
+        const newChat = {
+          id: room.id,
+          name: room.name || '(DM)',
+          message: '새로운 채팅방이 열렸습니다.',
+          time: '방금 전',
+          img: 'https://via.placeholder.com/56',
+        };
+        setChatList([newChat, ...chatList]);
+        setSelectedChat(newChat);
+      }
+
+      const socket = getSocket();
+      socket.emit('joinRoom', room.id);
+
+      alert('새로운 채팅방이 열렸습니다.');
+    } catch (e) {
+      console.error('DM 방 생성/조회 실패:', e);
+      alert('사용자를 찾는 중 오류가 발생했습니다.');
+    }
+    setNewEmail('');
+    setShowEmailInput(false);
+  };
+
+  const handleEmailInputKeyDown = (e) => {
+    if (e.key === 'Enter') handleAddNewChat();
+  };
 
     const handleAddNewChat = async () => {
         if (!newEmail.trim()) return;
@@ -1144,6 +1305,7 @@ export default function DashBoard() {
                     </div>
                 )}
             </main>
+
         </div>
     );
 }
