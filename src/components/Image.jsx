@@ -1,4 +1,4 @@
-export function Image({ src, alt, style }) {
+export default function Image({ src, alt, style }) {
     const defaultSrc = '../img/chaticon.png';
     if (!src) {
         src = defaultSrc;
