@@ -1,6 +1,9 @@
-import RadiusImg from '../components/RadiusImg';
-import chatIcon from '../img/chaticon.png';
+import DashBoardPage from './DashBoardPage.jsx';
 
 export default function TestPage({ style, ...props }) {
-    return <RadiusImg src={chatIcon} alt="test" style={style} {...props} />;
+    return (
+        <>
+            <DashBoardPage style={{ ...style }} {...props} />
+        </>
+    );
 }
