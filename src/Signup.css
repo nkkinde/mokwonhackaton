@@ -1,0 +1,152 @@
+.signup-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #eeeeee;
+  height: 100vh;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+
+
+.signup-box {
+  background: white;
+  padding: 40px 30px;
+  border-radius: 20px;
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+}
+
+.signup-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
+
+.signup-field label {
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.signup-field input {
+  padding: 10px;
+  font-size: 14px;
+  border: none;
+  border-bottom: 1px solid #aaa;
+  background: transparent;
+  outline: none;
+  color: #222;
+}
+
+.signup-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.signup-field input {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  border: none;
+  border-bottom: 1px solid #aaa;
+  background: transparent;
+  outline: none;
+}
+
+.input-line-group {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #aaa;
+  padding-bottom: 4px;
+  margin-bottom: 0px;
+}
+
+.input-line-group input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  padding: 10px 0;
+  color: #222;
+}
+
+.check-btn {
+  white-space: nowrap;
+  padding: 8px 14px;
+  font-size: 13px;
+  background-color: #e6f0ff;
+  color: #0074d9;
+  font-weight: bold;
+  border: 2px solid #80caff;
+  border-radius: 20px;
+  cursor: pointer;
+  margin-left: 10px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.check-btn:hover {
+  color: white;
+}
+.signup-radio input[type="radio"] {
+  accent-color: #000000;
+}
+
+
+
+.signup-radio {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 30px;
+  color: #222;
+}
+
+.signup-radio input[type="radio"] {
+  -webkit-appearance: none; 
+  -moz-appearance: none;  
+  appearance: none;       
+
+  
+  width: 1.15em;
+  height: 1.15em;
+  border: 2px solid #555; 
+  border-radius: 50%;
+  outline: none;
+  cursor: pointer;
+  margin-right: 5px; 
+  vertical-align: middle; 
+  background-color: #fff; 
+}
+
+
+.signup-radio input[type="radio"]:checked {
+  background-color: #000; 
+  border: 2px solid #000; 
+}
+
+.signup-radio label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.signup-submit {
+  padding: 14px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  background-color: #add8ff;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.signup-submit:hover {
+  background-color: #80caff;
+}
