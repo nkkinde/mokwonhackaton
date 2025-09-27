@@ -1,0 +1,96 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String?
+  name         String?
+  username     String?      @unique
+  locale       String       @default("ko")
+  avatarUrl    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  rooms        RoomMember[]
+  messages     Message[]
+}
+
+model Room {
+  id        String       @id @default(uuid())
+  name      String?
+  type      String
+  createdBy String
+  createdAt DateTime     @default(now())
+  members   RoomMember[]
+  messages  Message[]
+  summaries Summary[]
+  invites   Invite[]
+}
+
+model RoomMember {
+  id                String   @id @default(uuid())
+  roomId            String
+  userId            String
+  role              String   @default("member")
+  joinedAt          DateTime @default(now())
+  muted             Boolean  @default(false)
+  lastReadMessageId String?
+  room              Room     @relation(fields: [roomId], references: [id])
+  user              User     @relation(fields: [userId], references: [id])
+}
+
+model Message {
+  id           String               @id @default(uuid())
+  roomId       String
+  senderId     String
+  body         String
+  contentType  String               @default("text")
+  langDetected String?
+  meta         Json?
+  createdAt    DateTime             @default(now())
+  deletedAt    DateTime?
+  room         Room                 @relation(fields: [roomId], references: [id])
+  sender       User                 @relation(fields: [senderId], references: [id])
+  translations MessageTranslation[]
+}
+
+model MessageTranslation {
+  id           String   @id @default(uuid())
+  messageId    String
+  targetLocale String
+  translated   String
+  engine       String
+  createdAt    DateTime @default(now())
+  message      Message  @relation(fields: [messageId], references: [id])
+
+  @@unique([messageId, targetLocale])
+}
+
+model Invite {
+  id        String   @id @default(uuid())
+  roomId    String
+  inviterId String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  room      Room     @relation(fields: [roomId], references: [id])
+}
+
+model Summary {
+  id          String   @id @default(uuid())
+  roomId      String
+  requestedBy String
+  range       Json
+  locale      String
+  text        String
+  model       String
+  createdAt   DateTime @default(now())
+  room        Room     @relation(fields: [roomId], references: [id])
+}

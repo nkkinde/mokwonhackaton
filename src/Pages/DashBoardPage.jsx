@@ -3,7 +3,15 @@ import Sidebar from '../components/Sidebar';
 import Image from '../components/Image';
 import './DashBoardPage.css';
 
-// 임시 데이터
+// 임시 데이터 - 등록된 사용자들 (실제로는 DB에서 가져올 데이터)
+const registeredUsers = [
+    'kimcs@example.com',
+    'parkyh@example.com',
+    'leemj@example.com',
+    'test@test.com',
+    'user@example.com'
+];
+
 const chatListData = [
     {
         id: 1,
@@ -83,6 +91,9 @@ export default function DashBoard() {
     const [chatList, setChatList] = useState(chatListData);
     const [showEmailInput, setShowEmailInput] = useState(false);
     const [newEmail, setNewEmail] = useState('');
+    const [showSignupPrompt, setShowSignupPrompt] = useState(false);
+    const [unregisteredEmail, setUnregisteredEmail] = useState('');
+    const [copySuccess, setCopySuccess] = useState(false);
 
     const handleChatItemClick = chat => {
         setSelectedChat(chat);
@@ -109,8 +120,28 @@ export default function DashBoard() {
         }
     };
 
-    const handleAddNewChat = () => {
+    const handleAddNewChat = async () => {
         if (!newEmail.trim()) return;
+
+        // 간단한 이메일 형식 검증
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newEmail)) {
+            alert('유효한 이메일 주소를 입력해주세요.');
+            return;
+        }
+
+        // DB에서 사용자 존재 여부 확인 (실제로는 API 호출)
+        const isUserRegistered = await checkUserExists(newEmail);
+
+        if (!isUserRegistered) {
+            // 등록되지 않은 사용자인 경우
+            setUnregisteredEmail(newEmail);
+            setShowEmailInput(false);
+            setShowSignupPrompt(true);
+            return;
+        }
+
+        // 등록된 사용자인 경우 채팅방 추가
         const newId = chatList.length > 0 ? Math.max(...chatList.map(c => c.id)) + 1 : 1;
         setChatList([
             ...chatList,
@@ -124,6 +155,53 @@ export default function DashBoard() {
         ]);
         setNewEmail('');
         setShowEmailInput(false);
+    };
+
+    // 사용자 존재 여부 확인 (더미 함수 - 실제로는 API 호출)
+    const checkUserExists = async email => {
+        // 실제 구현에서는 서버 API 호출
+        // const response = await fetch(`/api/users/check?email=${email}`);
+        // return response.ok;
+
+        // 더미 로직: registeredUsers 배열에서 확인
+        return new Promise(resolve => {
+            setTimeout(() => {
+                resolve(registeredUsers.includes(email));
+            }, 500); // 네트워크 지연 시뮬레이션
+        });
+    };
+
+    const handleSignupPromptClose = () => {
+        setShowSignupPrompt(false);
+        setUnregisteredEmail('');
+        setCopySuccess(false); // 복사 상태 초기화
+    };
+
+    const handleCopySignupLink = async () => {
+        try {
+            const signupUrl = `${window.location.origin}/signup`;
+            await navigator.clipboard.writeText(signupUrl);
+            setCopySuccess(true);
+
+            // 3초 후 복사 성공 메시지 숨기기
+            setTimeout(() => {
+                setCopySuccess(false);
+            }, 3000);
+        } catch (error) {
+            console.error('클립보드 복사 실패:', error);
+            // 폴백: 텍스트 선택 방식
+            const textArea = document.createElement('textarea');
+            textArea.value = `${window.location.origin}/signup`;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            setCopySuccess(true);
+
+            setTimeout(() => {
+                setCopySuccess(false);
+            }, 3000);
+        }
     };
 
     return (
@@ -266,6 +344,202 @@ export default function DashBoard() {
                             }}
                             onClick={handleAddChatClick}
                             title="닫기">
+                            ×
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* 회원가입 안내 팝업 */}
+            {showSignupPrompt && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100vw',
+                        height: '100vh',
+                        background: 'rgba(0,0,0,0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 10000
+                    }}
+                    onClick={handleSignupPromptClose}>
+                    <div
+                        style={{
+                            background: '#fff',
+                            borderRadius: '20px',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                            padding: '40px 32px',
+                            minWidth: '400px',
+                            maxWidth: '90vw',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '20px',
+                            position: 'relative',
+                            textAlign: 'center'
+                        }}
+                        onClick={e => e.stopPropagation()}>
+                        {/* 아이콘 */}
+                        <div
+                            style={{
+                                width: '64px',
+                                height: '64px',
+                                borderRadius: '50%',
+                                background: '#ff6b6b',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 10px',
+                                fontSize: '28px',
+                                color: 'white'
+                            }}>
+                            ⚠️
+                        </div>
+
+                        <h3
+                            style={{
+                                margin: 0,
+                                fontSize: '24px',
+                                color: '#333',
+                                fontWeight: 'bold'
+                            }}>
+                            존재하지 않는 사용자
+                        </h3>
+
+                        <p
+                            style={{
+                                margin: 0,
+                                fontSize: '16px',
+                                color: '#666',
+                                lineHeight: '1.5'
+                            }}>
+                            <strong>{unregisteredEmail}</strong>은<br />
+                            등록되지 않은 이메일입니다.
+                        </p>
+
+                        <p
+                            style={{
+                                margin: 0,
+                                fontSize: '16px',
+                                color: '#333'
+                            }}>
+                            먼저 회원가입을 진행해주세요.
+                        </p>
+
+                        <div
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '12px',
+                                marginTop: '10px'
+                            }}>
+                            <button
+                                onClick={handleCopySignupLink}
+                                style={{
+                                    background: copySuccess ? '#28a745' : '#80caff',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '10px',
+                                    padding: '14px 20px',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px'
+                                }}
+                                onMouseOver={e => {
+                                    if (!copySuccess) {
+                                        e.target.style.background = '#6bb3ff';
+                                    }
+                                }}
+                                onMouseOut={e => {
+                                    if (!copySuccess) {
+                                        e.target.style.background = '#80caff';
+                                    }
+                                }}>
+                                {copySuccess ? (
+                                    <>✓ 링크가 복사되었습니다!</>
+                                ) : (
+                                    <>📋 회원가입 링크 복사</>
+                                )}
+                            </button>
+
+                            <button
+                                onClick={handleSignupPromptClose}
+                                style={{
+                                    background: 'transparent',
+                                    color: '#666',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '10px',
+                                    padding: '12px 20px',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                                onMouseOver={e => {
+                                    e.target.style.background = '#f5f5f5';
+                                    e.target.style.color = '#333';
+                                }}
+                                onMouseOut={e => {
+                                    e.target.style.background = 'transparent';
+                                    e.target.style.color = '#666';
+                                }}>
+                                닫기
+                            </button>
+                        </div>
+
+                        {/* 복사된 링크 표시 */}
+                        {copySuccess && (
+                            <div
+                                style={{
+                                    background: '#f8f9fa',
+                                    border: '1px solid #e9ecef',
+                                    borderRadius: '8px',
+                                    padding: '12px',
+                                    marginTop: '8px',
+                                    fontSize: '14px',
+                                    color: '#666',
+                                    wordBreak: 'break-all',
+                                    fontFamily: 'monospace'
+                                }}>
+                                {window.location.origin}/signup
+                            </div>
+                        )}
+
+                        {/* X 버튼 */}
+                        <button
+                            style={{
+                                position: 'absolute',
+                                top: '16px',
+                                right: '16px',
+                                background: 'transparent',
+                                border: 'none',
+                                fontSize: '24px',
+                                color: '#999',
+                                cursor: 'pointer',
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                            onClick={handleSignupPromptClose}
+                            title="닫기"
+                            onMouseOver={e => {
+                                e.target.style.background = '#f0f0f0';
+                                e.target.style.color = '#333';
+                            }}
+                            onMouseOut={e => {
+                                e.target.style.background = 'transparent';
+                                e.target.style.color = '#999';
+                            }}>
                             ×
                         </button>
                     </div>
