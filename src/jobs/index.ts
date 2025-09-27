@@ -1,2 +1,2 @@
-import './summary.worker';
-console.log('Worker running...');
+import "./summary.worker";
+console.log("Worker running...");

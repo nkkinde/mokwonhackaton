@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import { register, login, refreshToken } from './auth.service';
+import { Router } from "express";
+import { register, login, refreshToken } from "./auth.service";
 
 const r = Router();
 
-r.post('/register', async (req, res) => {
+r.post("/register", async (req, res) => {
   const { email, password, name } = req.body;
   try {
     const user = await register(email, password, name);
@@ -13,7 +13,7 @@ r.post('/register', async (req, res) => {
   }
 });
 
-r.post('/login', async (req, res) => {
+r.post("/login", async (req, res) => {
   const { email, password } = req.body;
   try {
     const tokens = await login(email, password);
@@ -23,7 +23,7 @@ r.post('/login', async (req, res) => {
   }
 });
 
-r.post('/refresh', async (req, res) => {
+r.post("/refresh", async (req, res) => {
   try {
     const { token } = req.body;
     const t = await refreshToken(token);
