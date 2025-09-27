@@ -106,3 +106,102 @@ export const prepareConversationHistory = (messages, maxMessages = 10) => {
             text: msg.text.replace('🤖 ChatGPT: ', '') // 봇 접두사 제거
         }));
 };
+
+// 번역 캐시 저장소
+const translationCache = new Map();
+
+/**
+ * 텍스트를 한국어로 번역합니다. (캐시 기능 포함)
+ * @param {string} text - 번역할 텍스트
+ * @param {string} targetLanguage - 목표 언어 (기본값: 한국어)
+ * @returns {Promise<string>} - 번역된 텍스트
+ */
+export const translateText = async (text, targetLanguage = '한국어') => {
+    try {
+        // API 키가 설정되어 있는지 확인
+        if (
+            !import.meta.env.VITE_OPENAI_API_KEY ||
+            import.meta.env.VITE_OPENAI_API_KEY === 'your_openai_api_key_here'
+        ) {
+            throw new Error(
+                'OpenAI API 키가 설정되지 않았습니다. .env 파일에서 VITE_OPENAI_API_KEY를 설정해주세요.'
+            );
+        }
+
+        // 캐시 키 생성
+        const cacheKey = `${text}:${targetLanguage}`;
+
+        // 캐시에서 확인
+        if (translationCache.has(cacheKey)) {
+            return translationCache.get(cacheKey);
+        }
+
+        const messages = [
+            {
+                role: 'system',
+                content: `당신은 전문 번역가입니다. 다음 텍스트를 ${targetLanguage}로 정확하게 번역해주세요. 번역된 텍스트만 응답하고, 다른 설명은 추가하지 마세요.`
+            },
+            {
+                role: 'user',
+                content: text
+            }
+        ];
+
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: messages,
+            max_tokens: 500,
+            temperature: 0.1 // 번역은 일관성이 중요하므로 낮은 temperature 사용
+        });
+
+        const translatedText = completion.choices[0].message.content.trim();
+
+        // 캐시에 저장
+        translationCache.set(cacheKey, translatedText);
+
+        return translatedText;
+    } catch (error) {
+        console.error('번역 API 호출 중 오류:', error);
+        throw new Error(`번역 실패: ${error.message}`);
+    }
+};
+
+/**
+ * 언어를 감지합니다.
+ * @param {string} text - 언어를 감지할 텍스트
+ * @returns {Promise<string>} - 감지된 언어
+ */
+export const detectLanguage = async text => {
+    try {
+        const messages = [
+            {
+                role: 'system',
+                content:
+                    '다음 텍스트의 언어를 감지하고, 언어 이름만 한국어로 응답해주세요. (예: 영어, 일본어, 중국어, 한국어 등)'
+            },
+            {
+                role: 'user',
+                content: text
+            }
+        ];
+
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: messages,
+            max_tokens: 50,
+            temperature: 0.1
+        });
+
+        return completion.choices[0].message.content.trim();
+    } catch (error) {
+        console.error('언어 감지 오류:', error);
+        return '알 수 없음';
+    }
+};
+
+/**
+ * 번역 캐시를 클리어합니다.
+ */
+export const clearTranslationCache = () => {
+    translationCache.clear();
+};

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Image from '../components/Image';
 import './DashBoardPage.css';
 // ChatGPT 기능이 필요할 때 아래 라인 주석 해제
 // import { generateChatGPTResponse, isChatGPTMessage, extractGPTQuery, prepareConversationHistory } from '../services/chatGPTService';
+import { translateText } from '../services/chatGPTService';
 
 // 더미 데이터 - 등록된 사용자들
 const registeredUsers = [
@@ -57,7 +58,7 @@ const chatMessagesData = {
             id: 'msg-1-1',
             senderId: 1,
             senderName: '김철수',
-            body: '안녕하세요!',
+            body: 'Hello! How are you today?',
             createdAt: '2025-09-28T10:00:00Z',
             isMe: false
         },
@@ -73,8 +74,16 @@ const chatMessagesData = {
             id: 'msg-1-3',
             senderId: 1,
             senderName: '김철수',
-            body: '오늘 회의 어떠세요?',
+            body: "What do you think about today's meeting?",
             createdAt: '2025-09-28T10:30:00Z',
+            isMe: false
+        },
+        {
+            id: 'msg-1-4',
+            senderId: 1,
+            senderName: '김철수',
+            body: 'I think the project is going well.',
+            createdAt: '2025-09-28T10:35:00Z',
             isMe: false
         }
     ],
@@ -91,8 +100,16 @@ const chatMessagesData = {
             id: 'msg-2-2',
             senderId: 3,
             senderName: '이민준',
-            body: '네, 확인했습니다. 자료 보내드렸어요.',
+            body: "Thank you for sharing the project status. I've sent you the documents.",
             createdAt: '2025-09-28T09:15:00Z',
+            isMe: false
+        },
+        {
+            id: 'msg-2-3',
+            senderId: 3,
+            senderName: '이민준',
+            body: 'こんにちは！プロジェクトの進捗はいかがですか？',
+            createdAt: '2025-09-28T09:20:00Z',
             isMe: false
         }
     ],
@@ -143,7 +160,14 @@ const chatMessagesData = {
 };
 
 // 채팅창 컴포넌트
-function ChatRoom({ room, messages, onSendMessage }) {
+function ChatRoom({
+    room,
+    messages,
+    onSendMessage,
+    translatedMessages,
+    translatingMessages,
+    onTranslateToggle
+}) {
     const [inputValue, setInputValue] = useState('');
 
     const handleSendMessage = () => {
@@ -236,9 +260,17 @@ function ChatRoom({ room, messages, onSendMessage }) {
                                     maxWidth: '70%',
                                     padding: '12px 16px',
                                     borderRadius: '16px',
-                                    backgroundColor: msg.isMe ? '#add8ff' : '#ffffff',
+                                    backgroundColor: translatedMessages[msg.id]
+                                        ? '#f8fff8'
+                                        : msg.isMe
+                                        ? '#add8ff'
+                                        : '#ffffff',
                                     boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                                    position: 'relative'
+                                    position: 'relative',
+                                    border: 'none',
+                                    borderLeft: translatedMessages[msg.id]
+                                        ? '3px solid #28a745'
+                                        : 'none'
                                 }}>
                                 {!msg.isMe && (
                                     <div
@@ -257,16 +289,61 @@ function ChatRoom({ room, messages, onSendMessage }) {
                                         lineHeight: '1.4',
                                         wordBreak: 'break-word'
                                     }}>
-                                    {msg.body}
+                                    {translatedMessages[msg.id] || msg.body}
                                 </div>
                                 <div
                                     style={{
-                                        fontSize: '10px',
-                                        color: msg.isMe ? '#0066cc' : '#999',
-                                        marginTop: '4px',
-                                        textAlign: 'right'
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        marginTop: '4px'
                                     }}>
-                                    {formatTime(msg.createdAt)}
+                                    <div
+                                        style={{
+                                            fontSize: '10px',
+                                            color: msg.isMe ? '#0066cc' : '#999'
+                                        }}>
+                                        {formatTime(msg.createdAt)}
+                                    </div>
+                                    {!msg.isMe && (
+                                        <button
+                                            onClick={() => onTranslateToggle(msg.id, msg.body)}
+                                            disabled={translatingMessages.has(msg.id)}
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                cursor: translatingMessages.has(msg.id)
+                                                    ? 'wait'
+                                                    : 'pointer',
+                                                fontSize: '12px',
+                                                color: translatedMessages[msg.id]
+                                                    ? '#28a745'
+                                                    : '#6c757d',
+                                                padding: '2px 6px',
+                                                borderRadius: '4px',
+                                                opacity: translatingMessages.has(msg.id) ? 0.6 : 1,
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                            title={
+                                                translatedMessages[msg.id]
+                                                    ? '원문 보기'
+                                                    : '번역하기'
+                                            }
+                                            onMouseOver={e => {
+                                                if (!translatingMessages.has(msg.id)) {
+                                                    e.target.style.backgroundColor = '#f8f9fa';
+                                                }
+                                            }}
+                                            onMouseOut={e => {
+                                                e.target.style.backgroundColor = 'transparent';
+                                            }}>
+                                            {translatingMessages.has(msg.id)
+                                                ? '🔄'
+                                                : translatedMessages[msg.id]
+                                                ? '🔙'
+                                                : '🌐'}
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -278,11 +355,12 @@ function ChatRoom({ room, messages, onSendMessage }) {
             <div
                 className="chat-input-area"
                 style={{
-                    padding: '16px 20px',
+                    padding: '20px 30px',
                     borderTop: '1px solid #eee',
-                    backgroundColor: '#fff'
+                    backgroundColor: '#fff',
+                    boxShadow: '0 -2px 8px rgba(0,0,0,0.05)'
                 }}>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', width: '100%' }}>
                     <input
                         type="text"
                         placeholder="메시지를 입력하세요..."
@@ -291,11 +369,24 @@ function ChatRoom({ room, messages, onSendMessage }) {
                         onKeyDown={handleInputKeyDown}
                         style={{
                             flex: 1,
-                            padding: '12px 16px',
-                            border: '1px solid #ddd',
-                            borderRadius: '24px',
+                            padding: '16px 20px',
+                            border: '1px solid #e1e5e9',
+                            borderRadius: '25px',
                             outline: 'none',
-                            fontSize: '14px'
+                            fontSize: '15px',
+                            backgroundColor: '#f8f9fa',
+                            transition: 'all 0.2s ease',
+                            minHeight: '50px'
+                        }}
+                        onFocus={e => {
+                            e.target.style.backgroundColor = '#ffffff';
+                            e.target.style.borderColor = '#add8ff';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(173, 216, 255, 0.1)';
+                        }}
+                        onBlur={e => {
+                            e.target.style.backgroundColor = '#f8f9fa';
+                            e.target.style.borderColor = '#e1e5e9';
+                            e.target.style.boxShadow = 'none';
                         }}
                     />
                     <button
@@ -334,7 +425,56 @@ export default function DashBoard() {
     // const [isGPTLoading, setIsGPTLoading] = useState(false);
     // const [gptError, setGptError] = useState('');
 
-    // 채팅방 클릭 핸들러
+    // 번역 관련 상태
+    const [translatedMessages, setTranslatedMessages] = useState({}); // 번역된 메시지 캐시
+    const [translatingMessages, setTranslatingMessages] = useState(new Set()); // 번역 중인 메시지 ID들
+
+    // 컴포넌트 마운트시 전체 화면 스타일 적용, 언마운트시 복원
+    useEffect(() => {
+        const originalBodyStyle = {
+            margin: document.body.style.margin,
+            padding: document.body.style.padding,
+            overflow: document.body.style.overflow,
+            width: document.body.style.width,
+            height: document.body.style.height
+        };
+
+        const originalHtmlStyle = {
+            margin: document.documentElement.style.margin,
+            padding: document.documentElement.style.padding,
+            overflow: document.documentElement.style.overflow,
+            width: document.documentElement.style.width,
+            height: document.documentElement.style.height
+        };
+
+        // DashBoard 페이지용 스타일 적용
+        document.body.style.margin = '0';
+        document.body.style.padding = '0';
+        document.body.style.overflow = 'hidden';
+        document.body.style.width = '100%';
+        document.body.style.height = '100%';
+
+        document.documentElement.style.margin = '0';
+        document.documentElement.style.padding = '0';
+        document.documentElement.style.overflow = 'hidden';
+        document.documentElement.style.width = '100%';
+        document.documentElement.style.height = '100%';
+
+        // 클린업 함수 - 컴포넌트 언마운트시 스타일 복원
+        return () => {
+            document.body.style.margin = originalBodyStyle.margin;
+            document.body.style.padding = originalBodyStyle.padding;
+            document.body.style.overflow = originalBodyStyle.overflow;
+            document.body.style.width = originalBodyStyle.width;
+            document.body.style.height = originalBodyStyle.height;
+
+            document.documentElement.style.margin = originalHtmlStyle.margin;
+            document.documentElement.style.padding = originalHtmlStyle.padding;
+            document.documentElement.style.overflow = originalHtmlStyle.overflow;
+            document.documentElement.style.width = originalHtmlStyle.width;
+            document.documentElement.style.height = originalHtmlStyle.height;
+        };
+    }, []); // 채팅방 클릭 핸들러
     const handleRoomClick = room => {
         setSelectedRoom(room);
         console.log('선택된 채팅방:', room);
@@ -367,6 +507,48 @@ export default function DashBoard() {
             // ChatGPT 응답 로직
         }
         */
+    };
+
+    // 번역 토글 핸들러
+    const handleTranslateToggle = async (messageId, originalText) => {
+        try {
+            // 이미 번역 중이면 무시
+            if (translatingMessages.has(messageId)) {
+                return;
+            }
+
+            // 번역된 상태에서 원문으로 돌아가기
+            if (translatedMessages[messageId]) {
+                setTranslatedMessages(prev => {
+                    const updated = { ...prev };
+                    delete updated[messageId];
+                    return updated;
+                });
+                return;
+            }
+
+            // 번역 시작
+            setTranslatingMessages(prev => new Set([...prev, messageId]));
+
+            // 번역 실행
+            const translatedText = await translateText(originalText, '한국어');
+
+            // 번역 결과 저장
+            setTranslatedMessages(prev => ({
+                ...prev,
+                [messageId]: translatedText
+            }));
+        } catch (error) {
+            console.error('번역 오류:', error);
+            alert('번역 중 오류가 발생했습니다: ' + error.message);
+        } finally {
+            // 번역 완료 - 로딩 상태 제거
+            setTranslatingMessages(prev => {
+                const updated = new Set(prev);
+                updated.delete(messageId);
+                return updated;
+            });
+        }
     };
 
     const handleAddChatClick = () => {
@@ -498,13 +680,25 @@ export default function DashBoard() {
                     className="sidebar-header"
                     style={{
                         position: 'relative',
-                        height: '48px',
+                        height: '60px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'flex-start',
-                        paddingRight: '40px'
+                        paddingRight: '40px',
+                        paddingLeft: '20px',
+                        backgroundColor: '#f8f9fa',
+                        borderBottom: '2px solid #e9ecef',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                     }}>
-                    <h2 style={{ margin: 0 }}>메시지</h2>
+                    <h2
+                        style={{
+                            margin: 0,
+                            fontSize: '18px',
+                            fontWeight: '600',
+                            color: '#2c3e50'
+                        }}>
+                        메시지
+                    </h2>
                     <button
                         style={{
                             position: 'absolute',
@@ -530,7 +724,14 @@ export default function DashBoard() {
                         +
                     </button>
                 </div>
-                <div className="chat-list" style={{ flex: 1, overflowY: 'auto' }}>
+                <div
+                    className="chat-list"
+                    style={{
+                        flex: 1,
+                        overflowY: 'auto',
+                        backgroundColor: '#ffffff',
+                        borderTop: '1px solid #f0f0f0'
+                    }}>
                     {chatList.length === 0 ? (
                         <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
                             <p>참여 중인 채팅방이 없습니다.</p>
@@ -540,28 +741,17 @@ export default function DashBoard() {
                         chatList.map(room => (
                             <div
                                 key={room.id}
-                                className="chat-item"
+                                className={`chat-item ${
+                                    selectedRoom?.id === room.id ? 'chat-item-selected' : ''
+                                }`}
                                 onClick={() => handleRoomClick(room)}
                                 style={{
                                     padding: '12px 16px',
                                     cursor: 'pointer',
-                                    backgroundColor:
-                                        selectedRoom?.id === room.id ? '#e6f3ff' : 'transparent',
                                     borderBottom: '1px solid #f0f0f0',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '12px',
-                                    transition: 'background-color 0.2s'
-                                }}
-                                onMouseEnter={e => {
-                                    if (selectedRoom?.id !== room.id) {
-                                        e.target.style.backgroundColor = '#f5f5f5';
-                                    }
-                                }}
-                                onMouseLeave={e => {
-                                    if (selectedRoom?.id !== room.id) {
-                                        e.target.style.backgroundColor = 'transparent';
-                                    }
+                                    gap: '12px'
                                 }}>
                                 <Image
                                     src={room.avatarUrl}
@@ -571,10 +761,13 @@ export default function DashBoard() {
                                         height: '48px',
                                         borderRadius: '50%',
                                         backgroundColor: '#ddd',
-                                        flexShrink: 0
+                                        flexShrink: 0,
+                                        pointerEvents: 'none'
                                     }}
                                 />
-                                <div className="chat-info" style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                    className="chat-info"
+                                    style={{ flex: 1, minWidth: 0, pointerEvents: 'none' }}>
                                     <div
                                         className="chat-name"
                                         style={{
@@ -583,7 +776,8 @@ export default function DashBoard() {
                                             marginBottom: '4px',
                                             whiteSpace: 'nowrap',
                                             overflow: 'hidden',
-                                            textOverflow: 'ellipsis'
+                                            textOverflow: 'ellipsis',
+                                            pointerEvents: 'none'
                                         }}>
                                         {room.name}
                                     </div>
@@ -594,7 +788,8 @@ export default function DashBoard() {
                                             color: '#666',
                                             whiteSpace: 'nowrap',
                                             overflow: 'hidden',
-                                            textOverflow: 'ellipsis'
+                                            textOverflow: 'ellipsis',
+                                            pointerEvents: 'none'
                                         }}>
                                         {room.lastMessage} · {formatRoomTime(room.lastMessageTime)}
                                     </div>
@@ -888,6 +1083,9 @@ export default function DashBoard() {
                         room={selectedRoom}
                         messages={chatMessages[selectedRoom.id] || []}
                         onSendMessage={handleSendMessage}
+                        translatedMessages={translatedMessages}
+                        translatingMessages={translatingMessages}
+                        onTranslateToggle={handleTranslateToggle}
                     />
                 ) : (
                     <div
