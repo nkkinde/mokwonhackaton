@@ -1,6 +1,6 @@
 // import DashBoardPage from './Pages/DashBoardPage';
 
-import TestPage from './Pages/testPage';
+import TestPage from './Pages/TestPage';
 
 function App() {
     return (
