@@ -1,0 +1,77 @@
+body {
+  background-image: url('/background.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
+.login-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+    background-color: #f0f4f8;
+}
+
+.education-container {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  padding: 20px;
+  box-sizing: border-box;
+  background-color: #fff;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+
+.education-content {
+  position: relative;
+  z-index: 1;
+}
+
+.login-box {
+  background: white;
+  padding: 100px 60px;
+  border-radius: 16px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+  width: 350px;
+}
+
+.login-label {
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.login-input {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  border: none;
+  border-bottom: 1px solid #aaa;
+  background: transparent;
+  outline: none;
+  font-size: 15px;
+    color: #222;
+}
+
+.login-btn,
+.signup-btn {
+  width: 100%;
+  padding: 14px;
+  margin-bottom: 12px;
+  background-color: #add8ff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.login-btn:hover,
+.signup-btn:hover {
+  background-color: #80caff;
+}
