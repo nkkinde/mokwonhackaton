@@ -30,7 +30,7 @@ function Signup() {
 
   useEffect(() => {
     if (form.password_confirm && form.password !== form.password_confirm) {
-      setPasswordError("비밀번호가 일치하지 않습니다.");
+      setPasswordError("Password does not match.");
     } else {
       setPasswordError("");
     }
@@ -42,23 +42,23 @@ function Signup() {
   };
 
   const handleCheckDuplicateEmail = async () => {
-    if (!form.email) return alert("이메일을 입력해주세요.");
+    if (!form.email) return alert("Please enter your email.");
     try {
       const response = await api.get(`/api/auth/check-email`, {
         params: { email: form.email },
       });
       if (response.data.available) {
-        alert("사용 가능한 이메일입니다.");
+        alert("This is an available email.");
         setIsEmailChecked(true);
       } else {
-        alert("이미 사용 중인 이메일입니다.");
+        alert("This email address is already in use.");
         setIsEmailChecked(false);
       }
     } catch (error) {
       if (error.response?.status === 409) {
-        alert("이미 사용 중인 이메일입니다.");
+        alert("This email address is already in use.");
       } else {
-        alert("이메일 중복 확인 중 오류가 발생했습니다.");
+        alert("An error occurred while checking for duplicate emails.");
       }
       setIsEmailChecked(false);
     }
@@ -67,9 +67,9 @@ function Signup() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!isEmailChecked) return alert("이메일 중복 확인을 해주세요.");
-    if (form.password !== form.password_confirm) return alert("비밀번호가 일치하지 않습니다.");
-    if (!form.password || !form.name) return alert("모든 필드를 입력해주세요.");
+    if (!isEmailChecked) return alert("Please check for duplicate emails.");
+    if (form.password !== form.password_confirm) return alert("Password does not match.");
+    if (!form.password || !form.name) return alert("Please fill in all fields.");
 
     try {
       const { email, password, name, user_type } = form;
@@ -82,11 +82,11 @@ function Signup() {
         locale, // 백엔드 User.locale 필드에 저장
       });
 
-      alert("회원가입이 완료되었습니다!");
+      alert("Your membership registration is complete!");
       navigate("/login");
     } catch (error) {
       console.error("회원가입 실패:", error);
-      alert("회원가입에 실패했습니다. 다시 시도해주세요.");
+      alert("Signing up failed. Please try again.");
     }
   };
 
@@ -124,7 +124,7 @@ function Signup() {
         </div>
 
         <div className="signup-field">
-          <label>이메일</label>
+          <label>email</label>
           <div className="input-line-group">
             <input
               type="email"
@@ -135,34 +135,34 @@ function Signup() {
               required
             />
             <button type="button" className="check-btn" onClick={handleCheckDuplicateEmail}>
-              중복 확인
+              Check for duplicates
             </button>
           </div>
         </div>
 
         <div className="signup-field">
-          <label>비밀번호</label>
+          <label>Password</label>
           <div className="input-line-group">
             <input
               type="password"
               name="password"
               value={form.password}
               onChange={handleChange}
-              placeholder="영문, 숫자 포함 8~30자"
+              placeholder="8 to 30 characters including English letters and numbers"
               required
             />
           </div>
         </div>
 
         <div className="signup-field">
-          <label>비밀번호 확인</label>
+          <label>verify password</label>
           <div className="input-line-group">
             <input
               type="password"
               name="password_confirm"
               value={form.password_confirm}
               onChange={handleChange}
-              placeholder="비밀번호를 다시 입력해주세요"
+              placeholder="Please re-enter your password"
               required
             />
           </div>
@@ -172,14 +172,14 @@ function Signup() {
         </div>
 
         <div className="signup-field">
-          <label>이름</label>
+          <label>Name</label>
           <div className="input-line-group">
             <input
               type="text"
               name="name"
               value={form.name}
               onChange={handleChange}
-              placeholder="이름을 입력해주세요"
+              placeholder="Please enter your name"
               required
             />
           </div>
@@ -201,7 +201,7 @@ function Signup() {
         </div>
 
         <button type="submit" className="signup-submit" disabled={!isEmailChecked || !!passwordError}>
-          가입하기
+          Sign up
         </button>
       </form>
     </div>

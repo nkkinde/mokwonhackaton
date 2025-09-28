@@ -1,8 +1,9 @@
 body {
-  background-color: rgb(31, 31, 31);
+  background-color: rgb(58, 58, 58);
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center center;
+  
 }
 
 .login-wrapper {
@@ -11,7 +12,8 @@ body {
   align-items: center;
   justify-content: center;
   height: 100vh;
-    background-color: #f0f4f8;
+  background-color: #f0f4f8;
+  
 }
 
 .education-container {
@@ -34,12 +36,26 @@ body {
 }
 
 .login-box {
-  background: rgb(70, 70, 70);
+  background: rgb(86, 86, 86);
   padding: 100px 60px;
   border-radius: 16px;
   box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
   width: 350px;
+  margin-top: 70px;
 }
+
+.login-icon {
+    display: flex;
+    justify-content: flex;
+    margin-bottom: 40px;
+    padding-left: 100px;
+}
+
+.login-icon img {
+    width: 150px;
+    height: 150px;
+}
+
 
 .login-label {
   font-size: 16px;

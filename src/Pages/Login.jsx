@@ -56,7 +56,7 @@ function Login() {
           />
         </div>
 
-        <div className="login-label">아이디</div>
+        <div className="login-label">ID</div>
         <input
           type="text"
           value={id}
@@ -65,7 +65,7 @@ function Login() {
           placeholder="Please enter your email"
         />
 
-        <div className="login-label">비밀번호</div>
+        <div className="login-label">Password</div>
         <input
           type="password"
           value={password}

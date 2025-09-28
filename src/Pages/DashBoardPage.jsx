@@ -37,7 +37,6 @@ function ChatRoom({ user, messages, onSendMessage }) {
   return (
     <div className="chat-room">
       <div className="chat-header">
-        <Image src={user.img} alt={user.name} style={{ width: '40px', height: '40px' }} />
         <h3>{user.name}</h3>
       </div>
 
@@ -61,7 +60,7 @@ function ChatRoom({ user, messages, onSendMessage }) {
           onChange={e => setInputValue(e.target.value)}
           onKeyDown={handleInputKeyDown}
         />
-        <button onClick={handleSendMessage}>전송</button>
+        <button onClick={handleSendMessage} className='send-button'>submit</button>
       </div>
     </div>
   );
@@ -191,11 +190,6 @@ export default function DashBoard() {
     if (!newEmail.trim()) return alert('이메일을 입력해주세요.');
     try {
       const res = await api.post('/api/rooms/dm', { email: newEmail });
-      if (!res.data?.data?.found) {
-        alert('존재하지 않는 사용자입니다.');
-        return;
-      }
-
       const room = res.data.data.room;
       const exists = chatList.find(c => c.id === room.id);
 
@@ -235,7 +229,7 @@ export default function DashBoard() {
         <div style={{ borderBottom: '1px solid #000000ff' }}>
           <div className="sidebar-header" style={{ position: 'relative', height: '48px', display: 'flex',
             alignItems: 'center', justifyContent: 'flex-start', paddingRight: '40px', margin: '15px 15px' }}>
-            <h2 style={{ margin: 0 }}>메시지</h2>
+            <h2 style={{ margin: 0 }}>Message</h2>
             <button
               style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
                 background: '#fff', color: '#80caff', border: 'none', borderRadius: '50%',
@@ -251,7 +245,7 @@ export default function DashBoard() {
         <div className="chat-list">
           {chatList.map((chat) => (
             <div key={chat.id} className="chat-item" onClick={() => handleChatItemClick(chat)}>
-              <Image src={chat.img} alt={chat.name} style={{ width: '56px', height: '56px' }} />
+
               <div className="chat-info">
                 <span className="chat-name">{chat.name}</span>
                 <span className="chat-preview">{chat.message} · {chat.time}</span>
@@ -271,9 +265,9 @@ export default function DashBoard() {
         ) : (
           <div className="placeholder">
             <div className="placeholder-icon"></div>
-            <h2>내 메시지</h2>
-            <p>친구에게 메시지를 보내보세요.</p>
-            <button className="message-button" onClick={handleAddChatClick}>메시지 보내기</button>
+            <h2>My Message</h2>
+            <p>Send a message to your friend.</p>
+            <button className="message-button" onClick={handleAddChatClick}>Send message</button>
           </div>
         )}
       </main>
@@ -291,7 +285,7 @@ export default function DashBoard() {
               gap: '16px', position: 'relative' }}
             onClick={e => e.stopPropagation()}
           >
-            <h3 style={{ margin: 0, fontSize: '20px', textAlign: 'center' }}>새 채팅 시작</h3>
+            <h3 style={{ margin: 0, fontSize: '20px', textAlign: 'center' }}>Start a new chat</h3>
             <input
               type="email"
               value={newEmail}
@@ -306,7 +300,7 @@ export default function DashBoard() {
                 padding: '10px 0', fontSize: '16px', cursor: 'pointer', fontWeight: 'bold' }}
               onClick={handleAddNewChat}
             >
-              확인
+              check
             </button>
             <button
               style={{ position: 'absolute', top: '12px', right: '12px', background: 'transparent',
